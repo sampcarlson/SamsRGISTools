@@ -7,6 +7,8 @@ library(sf)
 
 #dataset info: https://apps.nationalmap.gov/datasets/
 
+target_area = st_read(dsn="C:\\Users\\sampc\\Dropbox\\cfc\\spatial\\WholeCFWatershed.gpkg")
+
 areaName="test"
 
 gpkg=paste0(getwd(),"/",areaName,".gpkg")
@@ -51,7 +53,6 @@ getAndAddDem=function(rID,gpkg){
 }
 
 
-target_area = st_read(dsn="C:\\Users\\sampc\\Dropbox\\cfc\\spatial\\WholeCFWatershed.gpkg")
 target_area=st_transform(target_area,crs=4269)
 
 st_is_valid(target_area)
@@ -73,29 +74,6 @@ for(i in 1:nrow(potentialTiles)){
   }
   
 }
-
-vect
-
-#eg: 16 around bozeman:
-getAndAddDem(rID="n44w109",gpkg)
-getAndAddDem(rID="n44w110",gpkg)
-getAndAddDem(rID="n44w111",gpkg)
-getAndAddDem(rID="n44w112",gpkg)
-
-getAndAddDem(rID="n45w109",gpkg)
-getAndAddDem(rID="n45w110",gpkg)
-getAndAddDem(rID="n45w111",gpkg)
-getAndAddDem(rID="n45w112",gpkg)
-
-getAndAddDem(rID="n46w109",gpkg)
-getAndAddDem(rID="n46w110",gpkg)
-getAndAddDem(rID="n46w111",gpkg)
-getAndAddDem(rID="n46w112",gpkg)
-
-getAndAddDem(rID="n47w109",gpkg)
-getAndAddDem(rID="n47w110",gpkg)
-getAndAddDem(rID="n47w111",gpkg)
-getAndAddDem(rID="n47w112",gpkg)
 
 
 #build .vrt from all layers in .gpkg
