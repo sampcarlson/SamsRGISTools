@@ -19,11 +19,11 @@ dir.create(rastDir)
 #1/3 arc-second dem
 getAndAddDem=function(rID,gpkg){
   
-  baseURL="https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/"
+  baseURL="https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/"
   
   #url format:
   #https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/n10e138/USGS_13_n44w109.tif
-  demURL=paste0(baseURL,rID,"/USGS_1_",rID,".tif")
+  demURL=paste0(baseURL,rID,"/USGS_13_",rID,".tif")
   success=T
   if(!url.exists(demURL)){
     success=F
@@ -70,7 +70,7 @@ for(i in 1:nrow(potentialTiles)){
   this_tile=st_sfc(this_tile,crs=4269)
   
   if(st_intersects(target_area,this_tile,sparse=F)){
-    
+    #define dem tile name from nw:
   }
   
 }
