@@ -1,42 +1,43 @@
+library(curl)
 library(terra)
-library(RCurl)
-library(RSQLite)
 library(sf)
-
+library(RSQLite)
 
 
 #dataset info: https://apps.nationalmap.gov/datasets/
 
-target_area = st_read(dsn="C:\\Users\\sampc\\Dropbox\\cfc\\spatial\\WholeCFWatershed.gpkg")
-
-areaName="test"
+#target_area = st_read(dsn="C:\\Users\\sampc\\Dropbox\\cfc\\spatial\\WholeCFWatershed.gpkg")
+target_area=st_read(dsn="/home/sam/Dropbox/cfc/spatial/WholeCFWatershed.gpkg")
+areaName="cf_13deg"
 
 gpkg=paste0(getwd(),"/",areaName,".gpkg")
 
 rastDir=file.path(getwd())
-dir.create(rastDir)
+# dir.create(rastDir)
 
-#1/3 arc-second dem
-getAndAddDem=function(rID,gpkg){
-  
-  baseURL="https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/"
-  
-  #url format:
-  #https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/n10e138/USGS_13_n44w109.tif
-  demURL=paste0(baseURL,rID,"/USGS_13_",rID,".tif")
+
+getAndAddDem=function(rID,gpkg, resolution="1/3"){
   success=T
-  if(!url.exists(demURL)){
+  
+  #1 or 1/3 arc-second dem
+  if(as.numeric(resolution) == 1){
+    baseURL="https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/"
+    demURL=paste0(baseURL,rID,"/USGS_1_",rID,".tif")
+  } else if(resolution %in% c(1/3, 13, "1/3", "13")){
+    baseURL="https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/"
+    demURL=paste0(baseURL,rID,"/USGS_13_",rID,".tif")
+  } else{
+    warning(paste0("unknown resolution: ",resolution))
     success=F
-    print(paste0("ERROR: Unable to find raster ",rID," at url:"))
-    print(demURL)
   }
   
   if(success){
     if(file.exists(file.path(rastDir,"tempRast.tif"))){
       file.remove(file.path(rastDir,"tempRast.tif"))
     }
+    print(paste0("Downloading from: ", demURL))
     options("timeout"=600)
-    download.file(url=demURL,destfile=file.path(rastDir,"tempRast.tif"),cacheOK=FALSE,method = "curl")
+    curl_download(url=demURL,destfile=file.path(rastDir,"tempRast.tif"),quiet = F)
     options("timeout"=60)
     
     
@@ -59,18 +60,23 @@ st_is_valid(target_area)
 
 area_bounds=ceiling(st_bbox(target_area))
 potential_tiles=expand.grid(seq(from=area_bounds$ymin,to=area_bounds$ymax),
-                            seq(from=area_bounds$xmin,to=area_bounds$xmax))
+                            seq(from=area_bounds$xmin-1,to=area_bounds$xmax-1))
 names(potential_tiles)=c("y","x")
 
-for(i in 1:nrow(potentialTiles)){
+for(i in 1:nrow(potential_tiles)){
   nw=as.numeric(potential_tiles[i,])
-  #naming convention is upper left corner, eg n44w110 covers 43,109 (ll) to 44,110 (ur)
-  this_tile=st_polygon(x=list(matrix(c(nw[2],nw[2],nw[2]-1,nw[2]-1,nw[2],nw[1],nw[1]-1,nw[1]-1,nw[1],nw[1]),ncol=2)),
+  #naming convention is upper left corner, eg n44w110 covers 43,109 (lr) to 44,110 (ul)
+  this_tile=st_polygon(x=list(matrix(c(nw[2],nw[2],nw[2]+1,nw[2]+1,nw[2],nw[1],nw[1]-1,nw[1]-1,nw[1],nw[1]),ncol=2)),
                        dim="XY")
   this_tile=st_sfc(this_tile,crs=4269)
   
   if(st_intersects(target_area,this_tile,sparse=F)){
     #define dem tile name from nw:
+    demName=paste0("n",nw[1],"w",abs(nw[2]))
+    
+    try( # avoid stopping the process for an out-of-region raster
+      getAndAddDem(demName,gpkg, resolution=1/3)
+    )
   }
   
 }
@@ -86,3 +92,5 @@ rNames=paste0(paste0("GPKG:",gpkg,":"),rNames)
 
 vrt(rNames,paste0(areaName,".vrt"),overwrite=T)
 
+
+#terra::writeRaster(rast(paste0(areaName,".vrt")), filename=paste0(rastDir,"/",areaName,".tif"), filetype="COG")
